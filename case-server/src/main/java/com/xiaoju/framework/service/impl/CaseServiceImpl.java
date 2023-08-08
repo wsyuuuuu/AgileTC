@@ -1,6 +1,7 @@
 package com.xiaoju.framework.service.impl;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
@@ -13,16 +14,10 @@ import com.xiaoju.framework.entity.persistent.Biz;
 import com.xiaoju.framework.entity.persistent.CaseBackup;
 import com.xiaoju.framework.entity.persistent.ExecRecord;
 import com.xiaoju.framework.entity.persistent.TestCase;
-import com.xiaoju.framework.entity.request.cases.CaseConditionReq;
-import com.xiaoju.framework.entity.request.cases.CaseCreateReq;
-import com.xiaoju.framework.entity.request.cases.CaseEditReq;
-import com.xiaoju.framework.entity.request.cases.CaseQueryReq;
+import com.xiaoju.framework.entity.request.cases.*;
 import com.xiaoju.framework.entity.request.ws.WsSaveReq;
 import com.xiaoju.framework.entity.response.PersonResp;
-import com.xiaoju.framework.entity.response.cases.CaseConditionResp;
-import com.xiaoju.framework.entity.response.cases.CaseDetailResp;
-import com.xiaoju.framework.entity.response.cases.CaseGeneralInfoResp;
-import com.xiaoju.framework.entity.response.cases.CaseListResp;
+import com.xiaoju.framework.entity.response.cases.*;
 import com.xiaoju.framework.entity.response.controller.PageModule;
 import com.xiaoju.framework.entity.response.dir.BizListResp;
 import com.xiaoju.framework.entity.response.dir.DirTreeResp;
@@ -47,6 +42,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.xiaoju.framework.constants.SystemConstant.IS_DELETE;
+import static com.xiaoju.framework.constants.XmindConstant.ROOT;
 
 /**
  * 用例实现类
@@ -255,6 +251,49 @@ public class CaseServiceImpl implements CaseService {
 
         LOGGER.info(Thread.currentThread().getName() + ": http开始保存结束。");
 
+    }
+
+    @Override
+    public CaseStepsResp exportCaseSteps(Long caseId) {
+        TestCase testCase = caseMapper.selectOne(caseId);
+        if (testCase == null) {
+            throw new CaseServerException("用例不存在", StatusCode.NOT_FOUND_ENTITY);
+        }
+
+        JSONObject rootObj = JSON.parseObject(testCase.getCaseContent()).getJSONObject(ROOT);
+        String caseName = rootObj.getJSONObject("data").getString("text");
+        JSONObject rootNode = rootObj.getJSONArray("children").getJSONObject(0);
+        Stack<JSONObject> tempSteps = new Stack<>();
+        JSONArray totalSteps = new JSONArray();
+        walkCaseSteps(rootNode, totalSteps, tempSteps);
+
+        CaseStepsResp resp = new CaseStepsResp();
+        resp.setCaseId(caseId);
+        resp.setCaseName(caseName);
+        resp.setCaseSteps(totalSteps);
+        return resp;
+    }
+
+    private void walkCaseSteps(JSONObject node, JSONArray steps, Stack<JSONObject> tempSteps)
+    {
+        if (!node.containsKey("data"))
+            return;
+        if (!node.containsKey("children"))
+            return;
+        JSONObject data = node.getJSONObject("data");
+        JSONArray children = node.getJSONArray("children");
+        tempSteps.push(data);
+        if (children.isEmpty()) {
+            JSONArray onePath = new JSONArray();
+            onePath.addAll(tempSteps);
+            steps.add(onePath);
+        } else {
+            for (int i = 0; i < children.size(); i++) {
+                JSONObject child = children.getJSONObject(i);
+                walkCaseSteps(child, steps, tempSteps);
+            }
+        }
+        tempSteps.pop();
     }
 
     /**

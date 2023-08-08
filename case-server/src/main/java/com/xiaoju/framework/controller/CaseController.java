@@ -4,6 +4,7 @@ import com.xiaoju.framework.constants.enums.StatusCode;
 import com.xiaoju.framework.entity.exception.CaseServerException;
 import com.xiaoju.framework.entity.request.cases.*;
 import com.xiaoju.framework.entity.request.ws.WsSaveReq;
+import com.xiaoju.framework.entity.response.cases.CaseStepsResp;
 import com.xiaoju.framework.entity.response.controller.Response;
 import com.xiaoju.framework.service.CaseService;
 import org.slf4j.Logger;
@@ -201,4 +202,15 @@ public class CaseController {
         }
     }
 
+    @GetMapping(value = "/exportCaseSteps")
+    public Response<?> exportCaseList(@RequestParam Long caseId) {
+        try {
+            CaseStepsResp resp = caseService.exportCaseSteps(caseId);
+            return Response.success(resp);
+        }  catch (Exception e) {
+            e.printStackTrace();
+            LOGGER.error("[Case Export Steps] caseId={}, message={}", caseId, e.getMessage());
+            return Response.build(StatusCode.INTERNAL_ERROR);
+        }
+    }
 }

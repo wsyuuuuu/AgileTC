@@ -1,15 +1,9 @@
 package com.xiaoju.framework.service;
 
-import com.xiaoju.framework.entity.request.cases.CaseConditionReq;
-import com.xiaoju.framework.entity.request.cases.CaseCreateReq;
-import com.xiaoju.framework.entity.request.cases.CaseEditReq;
-import com.xiaoju.framework.entity.request.cases.CaseQueryReq;
+import com.xiaoju.framework.entity.request.cases.*;
 import com.xiaoju.framework.entity.request.ws.WsSaveReq;
 import com.xiaoju.framework.entity.response.PersonResp;
-import com.xiaoju.framework.entity.response.cases.CaseConditionResp;
-import com.xiaoju.framework.entity.response.cases.CaseDetailResp;
-import com.xiaoju.framework.entity.response.cases.CaseGeneralInfoResp;
-import com.xiaoju.framework.entity.response.cases.CaseListResp;
+import com.xiaoju.framework.entity.response.cases.*;
 import com.xiaoju.framework.entity.response.controller.PageModule;
 import com.xiaoju.framework.entity.response.dir.DirTreeResp;
 
@@ -94,4 +88,11 @@ public interface CaseService {
      * @param req 请求体
      */
     void wsSave(WsSaveReq req);
+
+    /**
+     *
+     * @param caseId case id
+     * @return response
+     */
+    CaseStepsResp exportCaseSteps(Long caseId);
 }
