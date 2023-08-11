@@ -40,9 +40,11 @@ import org.springframework.util.CollectionUtils;
 import javax.annotation.Resource;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.xiaoju.framework.constants.SystemConstant.IS_DELETE;
 import static com.xiaoju.framework.constants.XmindConstant.ROOT;
+import static io.netty.util.concurrent.FastThreadLocal.size;
 
 /**
  * 用例实现类
@@ -262,16 +264,54 @@ public class CaseServiceImpl implements CaseService {
 
         JSONObject rootObj = JSON.parseObject(testCase.getCaseContent()).getJSONObject(ROOT);
         String caseName = rootObj.getJSONObject("data").getString("text");
-        JSONObject rootNode = rootObj.getJSONArray("children").getJSONObject(0);
-        Stack<JSONObject> tempSteps = new Stack<>();
         JSONArray totalSteps = new JSONArray();
-        walkCaseSteps(rootNode, totalSteps, tempSteps);
+        JSONArray children = rootObj.getJSONArray("children");
+        for (int i = 0, len = children.size(); i < len; i++) {
+            Stack<JSONObject> tempSteps = new Stack<>();
+            walkCaseSteps(children.getJSONObject(i), totalSteps, tempSteps);
+        }
 
         CaseStepsResp resp = new CaseStepsResp();
         resp.setCaseId(caseId);
         resp.setCaseName(caseName);
         resp.setCaseSteps(totalSteps);
+
+        JSONObject reverseRoot = caseListToCaseObject(resp);
+        LOGGER.info("[=====] json={}", reverseRoot.toJSONString());
+
         return resp;
+    }
+
+    public JSONObject caseListToCaseObject(CaseStepsResp caseStepsResp) {
+        JSONObject result = new JSONObject();
+        JSONObject root = new JSONObject();
+        result.put("root", root);
+        JSONObject rootData = new JSONObject();
+        rootData.put("id", "bv8nxhi3c800");
+        rootData.put("created", new Long("1562059643204"));
+        rootData.put("text", caseStepsResp.getCaseName());
+        root.put("data", rootData);
+        JSONArray rootChildren = new JSONArray();
+        root.put("children", rootChildren);
+        for (int i = 0, len = caseStepsResp.getCaseSteps().size(); i < len; i++) {
+            JSONArray caseSteps = caseStepsResp.getCaseSteps().getJSONArray(i);
+            JSONArray children = rootChildren;
+            for (int j = 0; j < caseSteps.size(); j++) {
+                JSONObject data = caseSteps.getJSONObject(j);
+
+                Optional<Object> first = children.stream().filter(element -> ((JSONObject) element).getJSONObject("data").getString("id").equals(data.getString("id"))).findFirst();
+                if (first.isPresent()) {
+                    children = ((JSONObject) first.get()).getJSONArray("children");
+                } else {
+                    JSONObject node = new JSONObject();
+                    node.put("data", data);
+                    node.put("children", new JSONArray());
+                    children.add(node);
+                    children = node.getJSONArray("children");
+                }
+            }
+        }
+        return result;
     }
 
     private void walkCaseSteps(JSONObject node, JSONArray steps, Stack<JSONObject> tempSteps)
