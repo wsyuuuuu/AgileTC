@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.mysql.cj.xdevapi.JsonArray;
 import com.xiaoju.framework.constants.enums.ProgressEnum;
 import com.xiaoju.framework.entity.request.cases.FileImportReq;
 import com.xiaoju.framework.entity.xmind.*;
@@ -359,6 +358,24 @@ public class TreeUtil {
                 if (execCount.get() != 0) {
                     mergeExecRecord(((JSONObject) o), execContent, execCount);
                 }
+            }
+        }
+    }
+
+    public static void convertChildrenData(JSONArray srcChildren, JSONArray destChildren) {
+        for (int i = 0; i < srcChildren.size(); i++) {
+            JSONObject data = srcChildren.getJSONObject(i).getJSONObject("data");
+            JSONObject child = new JSONObject();
+            child.put("id", data.getString("id"));
+            child.put("title", data.getString("text"));
+            child.put("titleUnedited", true);
+            child.put("attributedTitle", new JSONArray());
+            destChildren.add(child);
+            JSONArray children = srcChildren.getJSONObject(i).getJSONArray("children");
+            if (children != null && !children.isEmpty()){
+                JSONArray innerChildren = new JSONArray();
+                child.put("children", new JSONObject() {{put("attached", innerChildren);}});
+                convertChildrenData(children, innerChildren);
             }
         }
     }

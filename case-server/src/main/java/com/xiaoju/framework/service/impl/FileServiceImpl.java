@@ -375,6 +375,20 @@ public class FileServiceImpl implements FileService {
         }
     }
 
+    private void writeText(String path, String text)
+    {
+        try {
+            FileWriter fileWriter = new FileWriter(path);
+            fileWriter.write(text);
+            fileWriter.flush();
+            fileWriter.close();
+        } catch (Exception e)
+        {
+            e.printStackTrace();
+            throw new CaseServerException("到处失败，写JSON失败：" + e.getMessage(), StatusCode.FILE_EXPORT_ERROR);
+        }
+    }
+
     //根据用例生成相应的文件
     private Map<String,String> createFile(Long id)
     {
@@ -391,6 +405,12 @@ public class FileServiceImpl implements FileService {
         writeMetaXml(path);
         //写MainFest文件,需要在此处添加文件夹中的问题信息
         writeManifestXml(path);
+        //content.json
+        writeContentJson(testCase, path + "/content.json");
+        //metadata.json
+        writeText(path + "/metadata.json", "{\"dataStructureVersion\":\"2\",\"layoutEngineVersion\":\"3\",\"creator\":{\"name\":\"Vana\",\"version\":\"23.08.02122\"}}");
+        //manifest.json
+        writeText(path + "/manifest.json", "{\"file-entries\":{\"content.json\":{},\"metadata.json\":{}}}");
 
         Map<String,String> pathMap = new HashMap<>();
         pathMap.put("exportPath",path);
@@ -439,6 +459,42 @@ public class FileServiceImpl implements FileService {
         String targetPath = path  + "/content.xml";
         //写入xml
         writeXml(targetPath,document);
+    }
+    private void writeContentJson(TestCase testCase, String path)
+    {
+        JSONObject rootObj = JSON.parseObject(testCase.getCaseContent()).getJSONObject(ROOT);
+
+        JSONArray jsonArray = new JSONArray();
+        JSONObject jsonObject = new JSONObject();
+        jsonArray.add(jsonObject);
+
+        jsonObject.put("id", ZEN_ROOT_VERSION);
+        jsonObject.put("class", "sheet");
+        jsonObject.put("title", "Canvas 1");
+
+        JSONObject rootTopic = new JSONObject();
+        jsonObject.put("rootTopic", rootTopic);
+
+        rootTopic.put("id", rootObj.getJSONObject(DATA).getString("id"));
+        rootTopic.put("class", "topic");
+        rootTopic.put("title", rootObj.getJSONObject(DATA).getString("text"));
+        rootTopic.put("titleUnedited", true);
+        rootTopic.put("attributedTitle", new JSONArray());
+        rootTopic.put("structureClass", "org.xmind.ui.map.clockwise");
+
+        JSONArray children = new JSONArray();
+        rootTopic.put("children", new JSONObject() {{put("attached", children);}});
+        TreeUtil.convertChildrenData(rootObj.getJSONArray("children"), children);
+
+        FileWriter fileWriter = null;
+        try {
+            fileWriter = new FileWriter(path);
+            fileWriter.write(jsonArray.toJSONString());
+            fileWriter.flush();
+            fileWriter.close();
+        } catch (IOException e) {
+            throw new CaseServerException("write content json failed: " + e, StatusCode.FILE_EXPORT_ERROR);
+        }
     }
 
     //创建要写入的文件夹
